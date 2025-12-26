@@ -487,7 +487,7 @@ class AdvancedShoobCardScraper:
                     self._log_to_file_only(f"Failed to get cards from page {page_num} after all attempts", "ERROR")
                     return []
     
-    async def _extract_card_data(self, card_url: str) -> Optional[Dict[str, Any]]:
+    async def _extract_card_data(self, card_url: str, page_num: int = None) -> Optional[Dict[str, Any]]:
         """Extract card data with smart waiting and robust error handling."""
         card_id = re.search(r'/cards/info/([a-f0-9]+)', card_url)
         card_id = card_id.group(1) if card_id else "unknown"
@@ -514,6 +514,7 @@ class AdvancedShoobCardScraper:
                 card_data = {
                     "card_id": card_id,
                     "card_url": card_url,
+                    "page_num": page_num,
                     "extraction_timestamp": datetime.now(timezone.utc).isoformat()
                 }
                 
@@ -745,7 +746,7 @@ class AdvancedShoobCardScraper:
                     sys.stderr.write(f"\r{progress_text:<60}")
                     sys.stderr.flush()
                     
-                    card_data = await self._extract_card_data(card_url)
+                    card_data = await self._extract_card_data(card_url, page_num)
                     if card_data:
                         page_cards.append(card_data)
                     
@@ -1033,7 +1034,7 @@ class AdvancedShoobCardScraper:
                 sys.stderr.flush()
                 
                 card_url = f"{self.urls['site_url']}/cards/info/{card_id}"
-                card_data = await self._extract_card_data(card_url)
+                card_data = await self._extract_card_data(card_url, None)  # Page unknown during retry
                 
                 if card_data:
                     self.all_cards.append(card_data)
