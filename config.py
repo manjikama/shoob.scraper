@@ -1,16 +1,12 @@
 """
-Professional Shoob.gg Card Scraper Configuration
-===============================================
+Advanced Event-Driven Shoob.gg Card Scraper Configuration
+========================================================
 
-Configuration settings for the professional-grade Shoob.gg card scraper.
-Adjust these settings to customize scraper behavior.
-
-Author: Senior Developer
-Version: 2.0.0
+Smart-waiting configuration for event-driven scraping.
+No fixed delays - waits for actual data loading events.
 """
 
 import logging
-from pathlib import Path
 
 # ============================================================================
 # SCRAPING CONFIGURATION
@@ -18,31 +14,33 @@ from pathlib import Path
 
 SCRAPING_CONFIG = {
     # Page range settings
-    "start_page": 2001,
-    "end_page": 2311,  # Set to None for unlimited scraping
+    "start_page": 1,
+    "end_page": 2311,
     
-    # Timing and delays (seconds) - optimized for speed
-    "page_delay": 1.5,          # Delay between pages (reduced)
-    "card_delay": 0.8,          # Delay between individual cards (reduced)
-    "timeout": 25000,           # Page load timeout (reduced to 25s)
-    "retry_attempts": 2,        # Number of retry attempts (reduced)
-    "retry_delay": 3.0,         # Delay between retries (reduced)
+    # Smart waiting (no fixed delays - event-driven)
+    "max_wait_timeout": 30000,     # Maximum wait for any element (30s)
+    "card_load_timeout": 15000,    # Wait for cards to load (15s)
+    "page_load_timeout": 20000,    # Wait for page navigation (20s)
+    "element_check_interval": 100, # Check interval for elements (100ms)
+    
+    # Minimal delays (only when absolutely necessary)
+    "minimal_delay": 0.1,          # Tiny delay for DOM stabilization
+    "network_settle_time": 0.5,    # Wait for network to settle after navigation
     
     # Output settings
-    "output_file": "shoob_cards.json",
+    "output_file": "shoob_cards_advanced.json",
     "output_folder": "output",
-    "save_mode": "single_file",  # "single_file" or "per_page"
     "pretty_print": True,
-    "include_metadata": True,   # Include raw meta tags (like enhanced_scraper)
-    "live_save": True,          # Save after each page (recommended)
+    "include_metadata": True,
+    "live_save": True,
     
     # Resume functionality
     "enable_resume": True,
-    "resume_file": "scraping_progress.json",
+    "resume_file": "scraping_progress_advanced.json",
     
     # Performance settings
-    "max_concurrent_cards": 1,  # Process cards sequentially for stability
-    "memory_limit_mb": 500,     # Memory usage limit
+    "retry_attempts": 3,
+    "retry_delay": 1.0,
 }
 
 # ============================================================================
@@ -51,7 +49,7 @@ SCRAPING_CONFIG = {
 
 BROWSER_CONFIG = {
     # Browser launch settings
-    "headless": True,           # Set to False to see browser window
+    "headless": True,
     "user_agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -80,6 +78,28 @@ BROWSER_CONFIG = {
         "Sec-Fetch-Mode": "navigate",
         "Sec-Fetch-Site": "none",
     }
+}
+
+# ============================================================================
+# SMART WAITING SELECTORS
+# ============================================================================
+
+WAIT_SELECTORS = {
+    # Page-level selectors (wait for these to confirm page is loaded)
+    "cards_container": "a[href*='/cards/info/']",  # Wait for card links to appear
+    "cards_loaded": "a[href*='/cards/info/']:nth-child(5)",  # Wait for at least 5 cards (more realistic)
+    "page_content": ".container, .content, main, body",  # Wait for main content
+    
+    # Card detail page selectors (more flexible)
+    "card_title": "meta[property='og:title'], title",  # Wait for any title
+    "card_meta": "meta[property='og:image'], meta[name='description']",  # Wait for any meta
+    "card_content": ".card-main, .cardData, .card-info, main, body",  # Wait for any content
+    "breadcrumb": ".breadcrumb-new, .breadcrumb, nav",  # Wait for navigation
+    
+    # Data-specific selectors (more lenient)
+    "basic_meta": "meta[property='og:title'], meta[name='description'], title",
+    "any_image": "meta[property='og:image'], meta[name='twitter:image'], img",
+    "page_loaded": "head, body",  # Basic page structure
 }
 
 # ============================================================================
@@ -119,11 +139,11 @@ DATA_CONFIG = {
     
     # Image URL preferences
     "prefer_high_res": True,
-    "image_size_preference": "700",  # For API fallback URLs
+    "image_size_preference": "700",
     
     # Data validation
     "validate_required_fields": ["name", "card_id", "image_url"],
-    "skip_invalid_cards": False,  # Include incomplete cards in output
+    "skip_invalid_cards": False,
 }
 
 # ============================================================================
@@ -136,17 +156,18 @@ LOGGING_CONFIG = {
     "format": "%(asctime)s | %(levelname)-7s | %(message)s",
     "date_format": "%H:%M:%S",
     
-    # File logging (optional)
-    "log_to_file": False,
-    "log_file": "scraper.log",
-    "max_log_size_mb": 10,
-    "backup_count": 3,
-    
     # Console output settings
     "show_progress": True,
-    "show_card_details": False,  # Disabled for speed - set to True for debugging
+    "show_card_details": False,     # Disabled for clean output
+    "show_wait_times": False,       # Disabled for clean output
     "show_statistics": True,
     "use_colors": True,
+    
+    # File logging for errors
+    "log_to_file": True,
+    "log_file": "scraper_errors.log",
+    "max_log_size_mb": 10,
+    "backup_count": 3,
 }
 
 # ============================================================================
@@ -177,7 +198,7 @@ ERROR_CONFIG = {
     # Error handling behavior
     "continue_on_error": True,
     "max_consecutive_errors": 5,
-    "error_cooldown": 10.0,  # Seconds to wait after consecutive errors
+    "error_cooldown": 2.0,
     
     # Specific error handling
     "timeout_retry": True,
@@ -198,15 +219,16 @@ PERFORMANCE_CONFIG = {
     # Statistics tracking
     "track_performance": True,
     "show_speed_stats": True,
+    "track_wait_times": True,
     "memory_monitoring": True,
     
     # Performance thresholds
-    "slow_page_threshold": 10.0,  # Seconds
-    "memory_warning_threshold": 400,  # MB
+    "slow_page_threshold": 10.0,
+    "memory_warning_threshold": 400,
     
-    # Auto-optimization
-    "auto_adjust_delays": False,  # Experimental feature
-    "adaptive_timeout": False,    # Experimental feature
+    # Smart waiting optimization
+    "adaptive_timeouts": True,
+    "learn_from_patterns": True,
 }
 
 # ============================================================================
@@ -214,17 +236,18 @@ PERFORMANCE_CONFIG = {
 # ============================================================================
 
 # File paths
+from pathlib import Path
 OUTPUT_DIR = Path(SCRAPING_CONFIG["output_folder"])
 LOG_DIR = Path("logs")
 
 # Validation
 REQUIRED_FIELDS = DATA_CONFIG["validate_required_fields"]
-MAX_PAGES_PER_SESSION = 1000  # Safety limit
+MAX_PAGES_PER_SESSION = 1000
 
 # Version info
-SCRAPER_VERSION = "2.0.0"
-CONFIG_VERSION = "2.0.0"
-LAST_UPDATED = "2025-12-25"
+SCRAPER_VERSION = "1.0.0-advanced"
+CONFIG_VERSION = "1.0.0"
+LAST_UPDATED = "2025-12-26"
 
 # ============================================================================
 # RUNTIME CONFIGURATION VALIDATION
@@ -237,8 +260,7 @@ def validate_config():
     # Check required directories
     try:
         OUTPUT_DIR.mkdir(exist_ok=True)
-        if LOGGING_CONFIG["log_to_file"]:
-            LOG_DIR.mkdir(exist_ok=True)
+        LOG_DIR.mkdir(exist_ok=True)
     except Exception as e:
         errors.append(f"Cannot create directories: {e}")
     
@@ -247,9 +269,9 @@ def validate_config():
         SCRAPING_CONFIG["start_page"] > SCRAPING_CONFIG["end_page"]):
         errors.append("start_page cannot be greater than end_page")
     
-    # Validate delays
-    if SCRAPING_CONFIG["page_delay"] < 0.5:
-        errors.append("page_delay should be at least 0.5 seconds")
+    # Validate timeouts
+    if SCRAPING_CONFIG["max_wait_timeout"] < 5000:
+        errors.append("max_wait_timeout should be at least 5 seconds")
     
     if errors:
         raise ValueError(f"Configuration errors: {'; '.join(errors)}")
