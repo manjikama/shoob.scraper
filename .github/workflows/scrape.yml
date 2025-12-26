@@ -38,7 +38,18 @@ jobs:
             --end ${{ github.event.inputs.end }} \
             --resume
 
+      # 🔒 GUARANTEED SAVE (runs even if scraper fails)
+      - name: Upload output as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shoob-data-${{ github.run_number }}
+          path: output/
+          retention-days: 90
+
+      # 📌 Commit only if scraper step succeeded
       - name: Commit output
+        if: success()
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
